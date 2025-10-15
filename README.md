@@ -15,7 +15,6 @@ Your task for this lab is to build and compile a program that pulls in frames fr
 Demo step three to the professor (include a youtube or other video sharing link of your program running in your submissions). Submit all of your source code to Canvas. Please include both your name and your partner’s name in the document.
 
 
-
 int main(int argc, char* argv[]){
     // make sure that there are enough arguments provided
     if (argc != 2) {
