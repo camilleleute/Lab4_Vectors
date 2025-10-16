@@ -13,12 +13,6 @@
 **********************************************************/
 #include "grayscale.h"
 
-#include <opencv2/opencv.hpp>
-#include <iostream>
-
-using namespace cv;
-using namespace std;
-
 /*-----------------------------------------------------
 * Function: to442_grayscale()
 *
@@ -46,13 +40,13 @@ Mat to442_grayscale(const Mat& input) {
 
     for (int y = 0; y < input.rows; y++) {
         for (int x = 0; x < input.cols; x++) {
-            Vec3b pixel = input,at<Vec3b>(y,x);
+            Vec3b pixel = input.at<Vec3b>(y,x);
             uchar blue = pixel[0];
             uchar green = pixel[1];
             uchar red = pixel[2];
             
             // convert to grayscale using ITU_R BT.709
-            uchar grayColor = static_cast<uchar>(0.2126 * red + 0.7152 * greeen + 0.0722 * blue);
+            uchar grayColor = static_cast<uchar>(0.2126 * red + 0.7152 * green + 0.0722 * blue);
             gray.at<uchar>(y, x) = grayColor;
         }
     }

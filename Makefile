@@ -33,7 +33,7 @@ all: main
 
 # since the main target uses all the object files put the OBJS there
 main: $(OBJS)
-	@$(CXX) main.o -o main $(LIBS)
+	@$(CXX) $(OBJS) -o main $(LIBS)
 
 #grayscale and sobel just use their own respective object files so dont need all OBJS
 # dont need these as separate targets because just helper functions
