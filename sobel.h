@@ -15,6 +15,12 @@
 #include <opencv2/core.hpp> 
 #include <array>
 #include <cstdint>
+#include <thread>
+#include <vector>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+#include <cmath>
 
 
 
@@ -26,7 +32,9 @@ uint8_t sum_and_clamp(int16_t Gx_sum, int16_t Gy_sum);
 cv::Mat to442_sobel(cv::Mat& matrix);
 
 
+
 //- #defines go here
+
 //- function prototypes go here
 
 #endif 

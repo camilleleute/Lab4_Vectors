@@ -14,6 +14,7 @@
 **********************************************************/
 #include "sobel.h"
 
+
 using namespace cv;
 using namespace std;
 
@@ -135,4 +136,64 @@ Mat to442_sobel(Mat& matrix) {
         }
     }
     return sobeled_matrix;
+}
+
+// sobel multithreading
+// Thread worker
+Mat sobel_multithread(const Mat &gray) {
+
+    // check if input is valid
+    if (gray.empty()) {
+        cerr << "empty input while threading\n";
+        return Mat();
+    }
+    
+    CV_Assert(gray.type() == CV_8UC1);
+
+    // make life easier, take off extra row bits if not divisible by 4
+    int16_t rows = gray.rows - (rows % 4);
+    int16_t cols = gray.cols;
+
+    // zero filled empty output image
+    Mat sobel_full = Mat::zeros(rows, cols, CV_8UC1);
+
+   // create the threads
+    vector<thread> threads;
+
+    // Lambda for threaded processing
+    //  get the slice area and apply sobel to it
+    //  then put sobel slice back in
+    auto process_quarter = [&](int start_row, int end_row) {
+        int16_t sobel_start = 0;
+        int16_t sobel_end = rows;
+        if (start_row != 0) {
+            sobel_start = start_row - 1;
+        }
+
+        if (end_row != rows) {
+            sobel_end = end_row + 1;
+        }
+
+        Mat slice = gray(Range(sobel_start, sobel_end), Range::all());
+        Mat sobel_slice = to442_sobel(slice);
+        sobel_slice.copyTo(sobel_full(Range(start_row, end_row), Range::all()));
+    };
+
+    // Compute slice boundaries
+    int quarter = rows / 4;
+    for (int i = 0; i < 4; i++) {
+        int start_row = i * quarter;
+        int end_row = (i + 1) * quarter;
+        threads.emplace_back(process_quarter, start_row, end_row);
+    }
+
+    // Wait for all threads to finish
+    for (auto &t : threads)
+        t.join();
+
+    // Remove the edges so no inverse vignette
+    Mat cropped = sobel_full(Range(1, rows - 1), Range(1, cols - 1)).clone();
+
+    return cropped;
+    
 }
