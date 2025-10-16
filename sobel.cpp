@@ -15,86 +15,132 @@
 #include "sobel.h"
 
 
-/*-----------------------------------------------------
-* Function: to442_sobel()
-*
-* Description: Takes a grayscale Mat and returns a Mat 
-* with the Sobel filter applied to it.
-*
-* inputs: datatype: brief description
-*
-* return: datatype
-*--------------------------------------------------------*/
+using namespace cv;
+using namespace std;
 
-//to442_sobel() {
+//create test matrix to test on
+Mat test_matrix(){
+    Mat mat;
+    mat.create(4, 4, CV_8UC1); //1 channel because greyscale
 
-//}
+    //! TEST CODE CHAT CHAT CHAT
+    // Fill the matrix with values for testing
+    for (int r = 0; r < mat.rows; r++) {
+        for (int c = 0; c < mat.cols; c++) {
+            mat.at<uchar>(r, c) = r * mat.cols + c + 1; // numbers 1..16
+        }
+    }
+
+    //prints matrix to stdout
+    cout << "test matrix:\n" << mat << endl;
+    return mat;
+}
+
+//itearte through the input matrix and find the neighbors of the current
+//return an array
+//find the neighbors of the current pixel and return an array of them
+//if its on the edge, return an array of all zeros
+array<int, 9> find_neighbors(Mat& matrix, int curr_pixel_row, int curr_pixel_col) {
+    //make an aray of 9 neighbors and start them empty
+    array<int,9> neighbors{};
+
+    //get total rows and collumns
+    int rows = matrix.rows;
+    int cols = matrix.cols;
+
+    //check if image is on the border
+    if (curr_pixel_row == 0 || curr_pixel_row == rows - 1 || curr_pixel_col == 0 || curr_pixel_col == cols - 1) {
+        return neighbors;
+    }
+    else {
+        //start in left upper corner and end in right bottom corner
+        int start_pixel_row = curr_pixel_row - 1;
+        int end_pixel_row = curr_pixel_row + 1;
+        int start_pixel_col = curr_pixel_col-1;
+        int end_pixel_col = curr_pixel_col + 1;
+
+        int final_arr_idx = 0;
+
+        for (int i = start_pixel_row; i <= end_pixel_row; i++){
+            //grab the entire row for faster mem access
+            const uchar* rowptr = matrix.ptr<uchar>(i);
+            for (int j = start_pixel_col; j <= end_pixel_col; j++){
+                //add the current pixel to the neighbors matrix
+                neighbors[final_arr_idx] = rowptr[j];
+                final_arr_idx++;
+            }
+        }
+    }
+
+    return neighbors;
+}
+
+//take in an array and return one value
+//multiply the current neighbors array with the Gx array and sum it all together
+//all values are signed and 16 bit when doing the math
+int16_t calculate_Gx(array<int, 9>& neighbors){
+    const array<int,9> Gx_weights{-1, 0, 1, 
+                                  -2, 0, 2, 
+                                  -1, 0, 1 };
+
+    int16_t total_sum = 0;
+    for (int i = 0; i < 9; i ++){
+        total_sum += neighbors[i] * Gx_weights[i];
+    }
+    return total_sum;
+}
+
+//take in an array and return one value
+//same thing for Gy
+//all values are signed and 16 bit when doing the math
+int16_t calculate_Gy(array<int, 9>& neighbors){
+    const array<int,9> Gy_weights{1, 2, 1, 
+                                  0, 0, 0, 
+                                  -1, -2, -1};
+
+    int16_t total_sum = 0;
+    for (int i = 0; i < 9; i ++){
+        total_sum += neighbors[i] * Gy_weights[i];
+    }
+    return total_sum;
+}
+
+//take in the signed 16 bit value 
+//do the absolute value calculation and then clamp it
+//all values are signed and 16 bit when doing the math
+//after clamping, store it back into a uint8
+//static_cast<type>(expression) is how you cast in c++
+uint8_t sum_and_clamp(int16_t Gx_sum, int16_t Gy_sum){
+    int16_t absolute_sum = abs(Gx_sum) + abs(Gy_sum);
+    if(absolute_sum <= 254){
+        return static_cast<uint8_t>(absolute_sum);
+    }
+    return 255;
+}
+
+//now just call those all together
+//takes in the greyscale matrix and then does this for every pixel in it
+Mat to442_sobel(Mat& matrix) {
+    int total_rows = matrix.rows;
+    int total_cols = matrix.cols;
+
+    Mat sobeled_matrix(total_rows, total_cols, CV_8UC1);
+
+    for (int i = 0; i < matrix.rows; i++){
+        for (int j = 0; j < matrix.cols; j++){
+            array<int, 9> nb = find_neighbors(matrix, i, j);
+            int16_t xsum = calculate_Gx(nb);
+            int16_t ysum = calculate_Gy(nb);
+            uint8_t final_val = sum_and_clamp(xsum, ysum);
+            sobeled_matrix.at<uchar>(i, j) = final_val;
+        }
+    }
+    return sobeled_matrix;
+}
 
 // sobel multithreading
 // Thread worker
-
-static void sobel_worker(const Mat &cropped_gray,
-                         Mat &output_full,
-                         int cols,
-                         int region_start_row,        // inclusive in the cropped image coords
-                         int region_end_row,          // inclusive in the cropped image coords
-                         int proc_roi_start_row,      // inclusive start row of ROI used for convolution
-                         int proc_roi_end_row,        // inclusive end row of ROI used for convolution
-                         atomic<int> &done_count,
-                         mutex &cv_m,
-                         condition_variable &cv_done)
-{
-    // ROI in cropped_gray is [proc_roi_start_row, proc_roi_end_row] inclusive
-    // We'll compute sobel for each target row t in [region_start_row, region_end_row].
-    // For each target row t we need neighbors t-1 and t+1 (so ROI must include them).
-    // For columns we compute x in [1, cols-2]. cols must be >= 3 to compute sobel.
-
-    const int roi_row_offset = proc_roi_start_row; // to convert absolute row -> roi row index
-
-    // If width too small, nothing to do
-    if (cols < 3) {
-        done_count.fetch_add(1);
-        cv_done.notify_one();
-        return;
-    }
-
-    for (int trow = region_start_row; trow <= region_end_row; ++trow) {
-        // y index in roi that corresponds to trow
-        int y_in_roi = trow - roi_row_offset;
-        // valid neighbor rows exist because ROI included padding above/below (except edge cases at image bounds)
-        // compute for x from 1 to cols-2
-        for (int x = 1; x <= cols - 2; ++x) {
-            // compute gx, gy using 3x3 neighborhood in cropped_gray (roi coords)
-            // neighbor positions in roi:
-            // (y_in_roi-1, x-1)  (y_in_roi-1, x)  (y_in_roi-1, x+1)
-            // (y_in_roi  , x-1)  (y_in_roi  , x)  (y_in_roi  , x+1)
-            // (y_in_roi+1, x-1)  (y_in_roi+1, x)  (y_in_roi+1, x+1)
-            int gx =
-                -1 * cropped_gray.at<uchar>(y_in_roi - 1, x - 1) + 1 * cropped_gray.at<uchar>(y_in_roi - 1, x + 1)
-                + -2 * cropped_gray.at<uchar>(y_in_roi    , x - 1) + 2 * cropped_gray.at<uchar>(y_in_roi    , x + 1)
-                + -1 * cropped_gray.at<uchar>(y_in_roi + 1, x - 1) + 1 * cropped_gray.at<uchar>(y_in_roi + 1, x + 1);
-
-            int gy =
-                -1 * cropped_gray.at<uchar>(y_in_roi - 1, x - 1) + -2 * cropped_gray.at<uchar>(y_in_roi - 1, x) + -1 * cropped_gray.at<uchar>(y_in_roi - 1, x + 1)
-                +  1 * cropped_gray.at<uchar>(y_in_roi + 1, x - 1) +  2 * cropped_gray.at<uchar>(y_in_roi + 1, x) +  1 * cropped_gray.at<uchar>(y_in_roi + 1, x + 1);
-
-            // magnitude
-            int mag = static_cast<int>(std::round(std::hypot(gx, gy)));
-            output_full.at<uchar>(trow, x) = clampToUchar(mag);
-        }
-        // leave column 0 and cols-1 alone (0) for now
-    }
-
-    // mark done & notify
-    int prev = done_count.fetch_add(1) + 1;
-    {
-        lock_guard<mutex> lk(cv_m);
-        // notify main waiting thread
-    }
-    cv_done.notify_one();
-}
-
-Mat apply_sobel_multithread(const Mat &gray) {
+Mat sobel_multithread(const Mat &gray) {
 
     // check if input is valid
     if (gray.empty()) {
@@ -111,9 +157,6 @@ Mat apply_sobel_multithread(const Mat &gray) {
     // zero filled empty output image
     Mat sobel_full = Mat::zeros(rows, cols, CV_8UC1);
 
-    // copy gray so OG isnt modded
-    Mat cropped_gray = gray.rowRange(0, new_rows);
-
    // create the threads
     vector<thread> threads;
 
@@ -124,14 +167,14 @@ Mat apply_sobel_multithread(const Mat &gray) {
         int16_t sobel_start = 0;
         int16_t sobel_end = rows;
         if (start_row != 0) {
-            sobel_start = start_row - 1
+            sobel_start = start_row - 1;
         }
 
         if (end_row != rows) {
             sobel_end = end_row + 1;
         }
 
-        Mat slice = gray(Range(start_row, end_row), Range::all());
+        Mat slice = gray(Range(sobel_start, sobel_end), Range::all());
         Mat sobel_slice = to442_sobel(slice);
         sobel_slice.copyTo(sobel_full(Range(start_row, end_row), Range::all()));
     };
