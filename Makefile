@@ -49,13 +49,13 @@ main: $(OBJS)
 # -c tells the compiler to just compile and stop after that, don't link yet
 # -o <filename> tells the compiler to put the output of this build into imageview.o
 main.o: main.cpp main.h
-	$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
+	@$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
 
 grayscale.o: grayscale.cpp grayscale.h
-	$(CXX) $(CXXFLAGS) -c grayscale.cpp -o grayscale.o
+	@$(CXX) $(CXXFLAGS) -c grayscale.cpp -o grayscale.o
 
 sobel.o: sobel.cpp sobel.h
-	$(CXX) $(CXXFLAGS) -c sobel.cpp -o sobel.o
+	@$(CXX) $(CXXFLAGS) -c sobel.cpp -o sobel.o
 
 # for cleaning
 clean:

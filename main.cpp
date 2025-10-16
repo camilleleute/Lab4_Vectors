@@ -2,8 +2,9 @@
 * Filename: main.c
 ******************************************************/
 #include "main.h"
+#include "sobel.h"
 
-// --- IMAGE TESTING MAIN --- //
+//! main for image to greyscale
 int main(int argc, char* argv[]){
     // make sure that there are enough arguments provided
     if (argc != 2) {
@@ -36,12 +37,44 @@ int main(int argc, char* argv[]){
     waitKey(0);
      
     return 0;
-
 }
 
 
+//!testing the sobel stuff
+// int main(int argc, char* argv[]){
+//     //TESTING SOBEL
+//     Mat test = test_matrix();
+
+//     // 2. Pick a pixel that is NOT on the border
+//     int row = 2;
+//     int col = 1;
+
+//     cout << "Picked point: " << (int)test.at<uchar>(row, col) << endl;
+
+//     // 3. Call find_neighbors on that pixel
+//     array<int, 9> nb = find_neighbors(test, row, col);
+
+//     // now multiply by x weight
+
+//     int16_t xsum = calculate_Gx(nb);
+//     int16_t ysum = calculate_Gy(nb);
+
+//     cout << "Gx sum : " << xsum << endl;
+//     cout << "Gy sum : " << ysum << endl;
+
+//     uint8_t final_val = sum_and_clamp(xsum, ysum);
+//     cout << "Pixel value after Sobel: " << (int)final_val << endl;
+
+//     Mat sobel = to442_sobel(test);
+//     cout << "sobel matrix:\n" << sobel << endl;
+
+//     return 0;
+// }
+
+
+//? not done yet
 // --- VIDEO TESTING MAIN --- //
-int main(int argc, char* argv[]){
+//int main(int argc, char* argv[]){
 
     // // make sure that there are enough arguments provided
     // if (argc != 2) {
@@ -60,9 +93,6 @@ int main(int argc, char* argv[]){
     // }
     
 
-    
+ //   return 0;
 
-
-    return 0;
-
-}
+//}

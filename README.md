@@ -83,3 +83,16 @@ COORDINATE BASED CHECK:
  if (row == 0 || row == rows - 1 || col == 0 || col == cols - 1) {
     // on the border
 } 
+- once i check that the matrix is on the edge, I can zero it out (get rid of the border)
+- include that check as i iterate through the matrix
+- then i multiply that neighboring matrix with the Gx matrix, then the Gy matrix, store those result matrices 
+- write function to sum those matrices
+- then calcualte the weight with absolute value and clamp it to 255
+
+
+- sub functions i need: 
+- printing out matrix
+- multiplying matrices together 
+- scale and clamp
+- summing matrix together 
+- finding neighbor and creating neighboring matrix
