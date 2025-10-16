@@ -42,3 +42,44 @@ int main(int argc, char* argv[]){
     return 0;
 
 }
+
+
+OVERALL PLAN:
+- FIRST: implement greyscale and sobel filter calculations
+    - test that on still images and verify it works
+- SECOND: tile the image
+    - test splitting up one image into 4 sections within one thread
+    - then putting it back together correctly
+    - dont split off into multiple threads yet just make sure it can be split and reattatched
+    - handle the halo pixel row reading here
+- THIRD: actually split it apart and deal with race conditions
+    - read from one main source matrix 
+    - each thread writes to its respective section in the destination
+    - no need for semaphores because reads are chill and writes are separate
+    - pay close attention that there are no overlaps in the writes section
+    - set one barrier at the end of the calculation
+        - when all threads are done writing, set the next frame
+- FOURTH: actually display the video
+    - if its really slow maybe need to implement double buffering
+        - while writing to one frame, display the other then swap
+    - take the video and somehow process it frame by frame (theres probably something for this in openCV)
+
+
+SOBEL FILTER:
+- to start, the first step was to take in a greyscale matrix in openCV
+- then take that image, go through the matrix and multiply it by something to simulate calculating the filter
+- then put it back together into a final matrix and output that side by side to the original
+- i also want to print out the original matrix dimensions and final to make sure the size was maintained in the transformation
+- once all of these parts are working, then I can go back and change the math and make sure that the sobel calculation is the one that is applied
+- OpenCV is row-major, so iterate the rows then the collumns
+- implement a BORDER POLICY: if the pixel is on the edge, set it to 0 automatically
+    - if it doesnt have 8 full neghbors to process, then just don't
+- so first iterate through the matrix (print it out) 
+- for each cell, first just test gathering the right 8 neighbors
+- if there is not enough neighbors then find a way to decipher that?
+    - how can i tell if a pixel is on the edge? 
+        - because i know the size of the matrix? and so i know the edges? or can i check for out of bounds? technically its in memory so i can just grab some data that is not part of the matrix... so idk this part yet
+COORDINATE BASED CHECK:
+ if (row == 0 || row == rows - 1 || col == 0 || col == cols - 1) {
+    // on the border
+} 
