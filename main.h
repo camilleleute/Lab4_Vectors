@@ -12,10 +12,14 @@
 #define MAIN_H
 
 //- #defines go here
-
-//- function prototypes go here
+#include "grayscale.h"
+#include "sobel.h"
 #include <opencv2/opencv.hpp>
-#include <string>
 #include <iostream>
+
+using namespace cv;
+using namespace std;
+//- function prototypes go here
+
 
 #endif 
