@@ -17,9 +17,10 @@
 using namespace cv;
 using namespace std;
 
-Mat to442_grayscale(const Mat& input);
+#define RED_SCALER 0.2126
+#define BLUE_SCALER 0.0722 
+#define GREEN_SCALER 0.7152
 
-//- #defines go here
-//- function prototypes go here
+Mat to442_grayscale(const Mat& input);
 
 #endif 

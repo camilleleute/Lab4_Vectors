@@ -1,17 +1,9 @@
 /*****************************************************
 * Filename: main.c
-*
-* appropriate file header goes here
 ******************************************************/
 #include "main.h"
-#include "grayscale.h"
-#include <opencv2/opencv.hpp>
-#include <iostream>
 
-using namespace cv;
-using namespace std;
-
-
+// --- IMAGE TESTING MAIN --- //
 int main(int argc, char* argv[]){
     // make sure that there are enough arguments provided
     if (argc != 2) {
@@ -32,12 +24,15 @@ int main(int argc, char* argv[]){
     }
     
     Mat gray_img = to442_grayscale(image);
+    Mat sobel_img = to442_sobel(gray_img);
 
     // Write result
     imwrite("output_gray.jpg", gray_img);
+    imwrite("output_sobel.jpg", sobel_img);
+
      
     // title of the window and what image to show
-    imshow("Display Window", gray_img);
+    imshow("Display Window", sobel_img);
     waitKey(0);
      
     return 0;
@@ -45,30 +40,26 @@ int main(int argc, char* argv[]){
 }
 
 
+// --- VIDEO TESTING MAIN --- //
+int main(int argc, char* argv[]){
 
-// int main(int argc, char* argv[]){
+    // make sure that there are enough arguments provided
+    if (argc != 2) {
+        std::cerr << "Error: Not enough arguments" << std::endl;
+        return 1;
+    }
 
-//     // make sure that there are enough arguments provided
-//     if (argc != 2) {
-//         std::cerr << "Error: Not enough arguments" << std::endl;
-//         return 1;
-//     }
+    // Open file
+    std::string videoPath = argv[1];
+    cv::VideoCapture cap(videoPath);
 
-//     // for testing IMAGE
-//     std::string imagePath = argv[1];
-//     cv::
-
-//     // // Open file
-//     // std::string videoPath = argv[1];
-//     // cv::VideoCapture cap(videoPath);
-
-//     // // Check if the video file was opened successfully
-//     // if (!cap.isOpened()) {
-//     //     std::cerr << "Error: Could not open or not a valid video file: " << std::endl;
-//     //     return 1;
-//     // }
+    // Check if the video file was opened successfully
+    if (!cap.isOpened()) {
+        std::cerr << "Error: Could not open or not a valid video file: " << std::endl;
+        return 1;
+    }
     
     
-//     return 0;
+    return 0;
 
-// }
+}

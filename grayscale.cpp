@@ -46,7 +46,7 @@ Mat to442_grayscale(const Mat& input) {
             uchar red = pixel[2];
             
             // convert to grayscale using ITU_R BT.709
-            uchar grayColor = static_cast<uchar>(0.2126 * red + 0.7152 * green + 0.0722 * blue);
+            uchar grayColor = static_cast<uchar>(RED_SCALER * red + GREEN_SCALER * green + BLUE_SCALER * blue);
             gray.at<uchar>(y, x) = grayColor;
         }
     }
