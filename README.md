@@ -53,16 +53,27 @@ OVERALL PLAN:
     - dont split off into multiple threads yet just make sure it can be split and reattatched
     - handle the halo pixel row reading here
 - THIRD: actually split it apart and deal with race conditions
-    - read from one main source matrix 
-    - each thread writes to its respective section in the destination
-    - no need for semaphores because reads are chill and writes are separate
-    - pay close attention that there are no overlaps in the writes section
-    - set one barrier at the end of the calculation
-        - when all threads are done writing, set the next frame
+    - the main thread converts the frame to greyscale
+    - main thread makes a final global output matrix
+    - then keep that global and split to 4 threads
+    - each thread reads its respective section from main global frame
+        - make sure to account for the borders here
+        - thread 0 gets section + 1
+        - thread 1 gets section - 1 + 1
+        - thread 2 gets section - 1 + 1
+        - thread 3 gets section -1
+    - GRAB THE ENTIRE ROWS FOR FASTER MEM ACCESS 
+    - each thread does the sobel function and writes its section to the output frame
+    - set a barrier in the main thread to wait for all the children to be done
+    - once done, move onto the next frame.
+    - join the sections properly, taking into account the borders
 - FOURTH: actually display the video
     - if its really slow maybe need to implement double buffering
         - while writing to one frame, display the other then swap
     - take the video and somehow process it frame by frame (theres probably something for this in openCV)
+
+
+
 
 
 SOBEL FILTER:

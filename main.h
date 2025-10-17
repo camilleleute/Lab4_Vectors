@@ -16,8 +16,10 @@
 #include "sobel.h"
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <thread>
+#include <opencv2/videoio.hpp>
 
-//- function prototypes go here
-
+cv::Mat src_frame;
+cv::Mat output_frame;
 
 #endif 

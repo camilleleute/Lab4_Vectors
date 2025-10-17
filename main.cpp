@@ -2,7 +2,6 @@
 * Filename: main.c
 ******************************************************/
 #include "main.h"
-#include "sobel.h"
 
 //! main for image to greyscale
 int main(int argc, char* argv[]){
@@ -14,39 +13,73 @@ int main(int argc, char* argv[]){
 
     // open the file
     std::string filename = argv[1];
-    // returns a matrix with the image loaded into it in BGR-8bit format
-    Mat image = imread(filename, IMREAD_COLOR);
+    VideoCapture frame(filename);
 
-    // check if file couldn't be read
-    if(image.empty())
+    if(!frame.isOpened())
     {
-        std::cout << "Could not read the image: " << filename << std::endl;
+        std::cout << "Could not open the video: " << filename << std::endl;
         return 1;
     }
     
-    Mat gray_img = to442_grayscale(image);
-    Mat sobel_img = to442_sobel(gray_img);
+    Mat src_frame;
 
-    // Write result
-    imwrite("output_gray.jpg", gray_img);
-    imwrite("output_sobel.jpg", sobel_img);
+    //while there are still more frames to read
+    while(frame.read(src_frame) == true){
+        //greyscale that hoe
+        Mat gray_img = to442_grayscale(src_frame);
+        //make the frame that the children threads are going to write to.
+        output_frame.create(gray_img.rows, gray_img.cols, CV_8UC1);
+        //calculate the threadbounds
+        array<ThreadBounds, 4> bounds = find_chunk(gray_img.rows);
+        //print_thread_bounds(bounds, gray_img.rows);
 
-     
-    // title of the window and what image to show
-    imshow("Display Window", sobel_img);
-    waitKey(0);
-     
+        //now make the children and assign them the task
+        thread t0(thread_task, ref(gray_img), ref(bounds), 0);
+        thread t1(thread_task, ref(gray_img), ref(bounds), 1);
+        thread t2(thread_task, ref(gray_img), ref(bounds), 2);
+        thread t3(thread_task, ref(gray_img), ref(bounds), 3);
+
+        //wait for all the threads to complete
+        t0.join();
+        t1.join();
+        t2.join();
+        t3.join();
+        //cout << "threads joined" << endl;
+
+        //stop it if u press the escape key
+        imshow("sobby filty", output_frame);
+        if(waitKey(1) == 27) {
+            cout << "stopped the video" << endl;
+            break;
+        }
+    }
+
+    frame.release();
+    destroyAllWindows();
     return 0;
 }
 
+ //! was for testing the right reading and writing chunk splitting prints
+    // cout << "TOTAL ROWS BEFORE SPLITTING: " << gray_img.rows << endl;
+    // cout << "=== THREAD ROW ASSIGNMENTS ===" << endl;
+    // for (int i = 0; i < 4; i++) {
+    //     cout << "Thread " << i << ":" << endl;
+    //     cout << "  Write Start: " << bounds[i].write_start
+    //      << "  Write End: "   << bounds[i].write_end << endl;
+    //     cout << "  Read Start: "  << bounds[i].read_start
+    //      << "  Read End: "    << bounds[i].read_end  << endl;
+    //     cout << "---------------------------------" << endl;
+    // }
+    //!just for displaying test
+    //Mat sobel_img = to442_sobel(gray_img);
+    //Write result
+    //imwrite("output_gray.jpg", gray_img);
+    //imwrite("output_sobel.jpg", sobel_img);
+    //title of the window and what image to show
+    //imshow("Display Window", sobel_img);
 
-<<<<<<< HEAD
 
-
-// --- VIDEO TESTING MAIN --- //
-// int main(int argc, char* argv[]){
-=======
-//!testing the sobel stuff
+// !testing the sobel stuff
 // int main(int argc, char* argv[]){
 //     //TESTING SOBEL
 //     Mat test = test_matrix();
@@ -77,11 +110,8 @@ int main(int argc, char* argv[]){
 //     return 0;
 // }
 
-
-//? not done yet
 // --- VIDEO TESTING MAIN --- //
 //int main(int argc, char* argv[]){
->>>>>>> main
 
 //     // make sure that there are enough arguments provided
 //     if (argc != 2) {
@@ -93,18 +123,6 @@ int main(int argc, char* argv[]){
 //     std::string videoPath = argv[1];
 //     cv::VideoCapture cap(videoPath);
 
-<<<<<<< HEAD
-//     // Check if the video file was opened successfully
-//     if (!cap.isOpened()) {
-//         std::cerr << "Error: Could not open or not a valid video file: " << std::endl;
-//         return 1;
-//     }
-
-
-//     return 0;
-
-// }
-=======
     // // Check if the video file was opened successfully
     // if (!cap.isOpened()) {
     //     std::cerr << "Error: Could not open or not a valid video file: " << std::endl;
@@ -115,4 +133,3 @@ int main(int argc, char* argv[]){
  //   return 0;
 
 //}
->>>>>>> main
