@@ -13,17 +13,6 @@
 **********************************************************/
 #include "grayscale.h"
 
-/*-----------------------------------------------------
-* Function: to442_grayscale()
-*
-* Description: Turns an OpenCV RGB Mat into a grayscale Mat
-* using ITU-R (BT.709) grayscale algorithm
-*
-* inputs: Mat: color image
-*
-* return: Mat: Grayscale image
-*--------------------------------------------------------*/
-
 Mat to442_grayscale(const Mat& input) {
     
     // check input validity

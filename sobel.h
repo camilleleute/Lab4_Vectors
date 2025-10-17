@@ -34,7 +34,6 @@ struct ThreadBounds{
     int write_end;
 };
 
-cv::Mat test_matrix();
 std::array<int, 9> find_neighbors(cv::Mat& matrix, int curr_pixel_row, int curr_pixel_col);
 int16_t calculate_Gx(std::array<int, 9>& neighbors);
 int16_t calculate_Gy(std::array<int, 9>& neighbors);
@@ -42,11 +41,6 @@ uint8_t sum_and_clamp(int16_t Gx_sum, int16_t Gy_sum);
 cv::Mat to442_sobel(cv::Mat& matrix);
 std::array<ThreadBounds, 4> find_chunk(int total_rows);
 int thread_task(cv::Mat& matrix, std::array<ThreadBounds, 4>& bounds, int threadId);
-void print_thread_bounds(const std::array<ThreadBounds, 4>& bounds, int total_rows);
 
-
-//- #defines go here
-
-//- function prototypes go here
 
 #endif 

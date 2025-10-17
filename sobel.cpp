@@ -18,24 +18,6 @@
 using namespace cv;
 using namespace std;
 
-   //! TEST CODE CHAT CHAT CHAT
-//create test matrix to test on
-Mat test_matrix(){
-    Mat mat;
-    mat.create(4, 4, CV_8UC1); //1 channel because greyscale
-
-    // Fill the matrix with values for testing
-    for (int r = 0; r < mat.rows; r++) {
-        for (int c = 0; c < mat.cols; c++) {
-            mat.at<uchar>(r, c) = r * mat.cols + c + 1; // numbers 1..16
-        }
-    }
-
-    //prints matrix to stdout
-    cout << "test matrix:\n" << mat << endl;
-    return mat;
-}
-
 //itearte through the input matrix and find the neighbors of the current
 //return an array
 //find the neighbors of the current pixel and return an array of them
@@ -190,41 +172,32 @@ array<ThreadBounds, 4> find_chunk(int total_rows){
 //does the reading, does the math, then writes it to its spot
 //this gets assigned in the main thread
 int thread_task(Mat& matrix, array<ThreadBounds, 4>& bounds, int threadId) {
-    // Read the chunk (includes padding rows for neighbor calculations)
+    //read the right chunk out
     Mat chunk = matrix(Range(bounds[threadId].read_start, bounds[threadId].read_end + 1), Range::all());
     
-    // Apply Sobel to the chunk
+    //sobel that hoe
     Mat sobeled_chunk = to442_sobel(chunk);
     
-    // Calculate which rows from sobeled_chunk to write
-    // If read_start == write_start (top border), we write from row 0
-    // Otherwise, we skip the first row (which is padding and got zeroed)
-    int start_row_in_chunk = (bounds[threadId].read_start == bounds[threadId].write_start) ? 0 : 1;
+    //this takes care of the boundery issues
+    //calculate which rows to write from the sobeled chunk since the borders will be gone
+    //if we are reading from where we write to, we are at the top border so write from row zero
+    //else, we skip the first row and write from the rest since the top border will be zeroed out
+    int start_row_in_chunk;
+    if (bounds[threadId].read_start == bounds[threadId].write_start) {
+        start_row_in_chunk = 0;
+    } else {
+        start_row_in_chunk = 1;
+    }
     
-    // Similarly for the end - if read_end == write_end (bottom border), include the last row
-    // Otherwise, exclude it
+    //do the same thing for the end
+    //if the read end is the same to where we write, its the bottom border and include the last row
     int num_rows_to_write = bounds[threadId].write_end - bounds[threadId].write_start + 1;
     
-    // Copy the valid portion to the output frame
+    //copy to output frame
     Mat chunk_result = sobeled_chunk(Range(start_row_in_chunk, start_row_in_chunk + num_rows_to_write), Range::all());
     Mat chunk_to_write = output_frame(Range(bounds[threadId].write_start, bounds[threadId].write_end + 1), Range::all());
     chunk_result.copyTo(chunk_to_write);
 
     return 0;
 }
-
-//!CHAT WRITTEN TEST FUNC
-// void print_thread_bounds(const std::array<ThreadBounds, 4>& bounds, int total_rows) {
-//     std::cout << "TOTAL ROWS BEFORE SPLITTING: " << total_rows << std::endl;
-//     std::cout << "=== THREAD ROW ASSIGNMENTS ===" << std::endl;
-
-//     for (int i = 0; i < 4; i++) {
-//         std::cout << "Thread " << i << ":" << std::endl;
-//         std::cout << "  Write Start: " << bounds[i].write_start
-//                   << "  Write End: "   << bounds[i].write_end << std::endl;
-//         std::cout << "  Read Start: "  << bounds[i].read_start
-//                   << "  Read End: "    << bounds[i].read_end  << std::endl;
-//         std::cout << "---------------------------------" << std::endl;
-//     }
-// }
 
