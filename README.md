@@ -14,36 +14,6 @@ Your task for this lab is to build and compile a program that pulls in frames fr
 ## Deliverables
 Demo step three to the professor (include a youtube or other video sharing link of your program running in your submissions). Submit all of your source code to Canvas. Please include both your name and your partner’s name in the document.
 
-
-int main(int argc, char* argv[]){
-    // make sure that there are enough arguments provided
-    if (argc != 2) {
-        std::cerr << "Error: not enough arguments" << std::endl;
-        return 1;
-    }
-
-    // open the file
-    std::string filename = argv[1];
-    // returns a matrix with the image loaded into it in BGR-8bit format
-    Mat image = imread(filename, IMREAD_COLOR);
-
-    // check if file couldn't be read
-    if(image.empty())
-    {
-        std::cout << "Could not read the image: " << filename << std::endl;
-        return 1;
-    }
-     
-    // title of the window and what image to show
-    imshow("Display Window", image);
-    waitKey(DISPLAY_TIME);
-    std::cout << "done displaying";
-     
-    return 0;
-
-}
-
-
 OVERALL PLAN:
 - FIRST: implement greyscale and sobel filter calculations
     - test that on still images and verify it works
@@ -72,10 +42,6 @@ OVERALL PLAN:
         - while writing to one frame, display the other then swap
     - take the video and somehow process it frame by frame (theres probably something for this in openCV)
 
-
-
-
-
 SOBEL FILTER:
 - to start, the first step was to take in a greyscale matrix in openCV
 - then take that image, go through the matrix and multiply it by something to simulate calculating the filter
@@ -99,8 +65,6 @@ COORDINATE BASED CHECK:
 - then i multiply that neighboring matrix with the Gx matrix, then the Gy matrix, store those result matrices 
 - write function to sum those matrices
 - then calcualte the weight with absolute value and clamp it to 255
-
-
 - sub functions i need: 
 - printing out matrix
 - multiplying matrices together 
