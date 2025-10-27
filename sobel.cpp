@@ -14,107 +14,124 @@
 **********************************************************/
 #include "sobel.h"
 
-
 using namespace cv;
 using namespace std;
 
-//itearte through the input matrix and find the neighbors of the current
-//return an array
-//find the neighbors of the current pixel and return an array of them
-//if its on the edge, return an array of all zeros
-array<int, 9> find_neighbors(Mat& matrix, int curr_pixel_row, int curr_pixel_col) {
-    //make an aray of 9 neighbors and start them empty
-    array<int,9> neighbors{};
-
-    //get total rows and collumns
-    int rows = matrix.rows;
-    int cols = matrix.cols;
-
-    //check if image is on the border
-    if (curr_pixel_row == 0 || curr_pixel_row == rows - 1 || curr_pixel_col == 0 || curr_pixel_col == cols - 1) {
-        return neighbors;
-    }
-    else {
-        //start in left upper corner and end in right bottom corner
-        int start_pixel_row = curr_pixel_row - 1;
-        int end_pixel_row = curr_pixel_row + 1;
-        int start_pixel_col = curr_pixel_col-1;
-        int end_pixel_col = curr_pixel_col + 1;
-
-        int final_arr_idx = 0;
-
-        for (int i = start_pixel_row; i <= end_pixel_row; i++){
-            //grab the entire row for faster mem access
-            const uchar* rowptr = matrix.ptr<uchar>(i);
-            for (int j = start_pixel_col; j <= end_pixel_col; j++){
-                //add the current pixel to the neighbors matrix
-                neighbors[final_arr_idx] = rowptr[j];
-                final_arr_idx++;
-            }
-        }
-    }
-
-    return neighbors;
-}
-
-//take in an array and return one value
-//multiply the current neighbors array with the Gx array and sum it all together
-//all values are signed and 16 bit when doing the math
-int16_t calculate_Gx(array<int, 9>& neighbors){
-    const array<int,9> Gx_weights{-1, 0, 1, 
-                                  -2, 0, 2, 
-                                  -1, 0, 1 };
-
-    int16_t total_sum = 0;
-    for (int i = 0; i < 9; i ++){
-        total_sum += neighbors[i] * Gx_weights[i];
-    }
-    return total_sum;
-}
-
-//take in an array and return one value
-//same thing for Gy
-//all values are signed and 16 bit when doing the math
-int16_t calculate_Gy(array<int, 9>& neighbors){
-    const array<int,9> Gy_weights{1, 2, 1, 
-                                  0, 0, 0, 
-                                  -1, -2, -1};
-
-    int16_t total_sum = 0;
-    for (int i = 0; i < 9; i ++){
-        total_sum += neighbors[i] * Gy_weights[i];
-    }
-    return total_sum;
-}
-
-//take in the signed 16 bit value 
-//do the absolute value calculation and then clamp it
-//all values are signed and 16 bit when doing the math
-//after clamping, store it back into a uint8
-//static_cast<type>(expression) is how you cast in c++
-uint8_t sum_and_clamp(int16_t Gx_sum, int16_t Gy_sum){
-    int16_t absolute_sum = abs(Gx_sum) + abs(Gy_sum);
-    if(absolute_sum <= 254){
-        return static_cast<uint8_t>(absolute_sum);
-    }
-    return 255;
-}
-
-//now just call those all together
 //takes in the greyscale matrix and then does this for every pixel in it
 Mat to442_sobel(Mat& matrix) {
     int total_rows = matrix.rows;
-    int total_cols = matrix.cols;
 
-    Mat sobeled_matrix(total_rows, total_cols, CV_8UC1);
+    //make sure the input matrix is a multiple of 8 before beginning
+    int cropped_width = (total_rows / 8) * 8;
+    Mat cropped_matrix = matrix(Rect(0, 0, cropped_width, total_rows));
 
-    for (int i = 0; i < matrix.rows; i++){
-        for (int j = 0; j < matrix.cols; j++){
-            array<int, 9> nb = find_neighbors(matrix, i, j);
-            int16_t xsum = calculate_Gx(nb);
-            int16_t ysum = calculate_Gy(nb);
-            uint8_t final_val = sum_and_clamp(xsum, ysum);
-            sobeled_matrix.at<uchar>(i, j) = final_val;
+    Mat sobeled_matrix(cropped_matrix.rows, cropped_matrix.cols, CV_8UC1);
+    //dont include the first or the last row since we are skipping borders here
+    for (int i = 1; i < matrix.rows-1; i++){
+
+        //mat.ptr returns a pointer to the whole row of the matrix 
+        //?do i need to check if its continuous before doing that??
+        //get all the row neighbors (the top row, middle row, bottom row)
+        //i-1 gives row above, i is the current row, i + 1 is the row below
+        const uchar* top_row = matrix.ptr<uchar>(i-1);
+        const uchar* mid_row = matrix.ptr<uchar>(i);
+        const uchar* bot_row = matrix.ptr<uchar>(i+1);
+        //now that we have a pointer to each of the rows, iterate through those via column
+        //need to grab in chunks of 8 so have it move forward 8 every time
+        //skip first and last col as well since we dont want border
+        for (int j = 1; j < matrix.cols-8; j+=8){
+            //vld1_u8(const uint8_t* ptr) -> uint8x8_t top_left;
+            //make the vectors for all the neighbors by passing in the row pointer and which column to go to
+            uint8x8_t top_left_8 = vld1_u8(&top_row[j-1]);
+            uint8x8_t top_8 = vld1_u8(&top_row[j]);
+            uint8x8_t top_right_8 = vld1_u8(&top_row[j+1]);
+
+            uint8x8_t mid_left_8 = vld1_u8(&mid_row[j-1]);
+            uint8x8_t mid_8 = vld1_u8(&mid_row[j]);
+            uint8x8_t mid_right_8 = vld1_u8(&mid_row[j+1]);
+
+            uint8x8_t bot_left_8 = vld1_u8(&bot_row[j-1]);
+            uint8x8_t bot_8 = vld1_u8(&bot_row[j]);
+            uint8x8_t bot_right_8 = vld1_u8(&bot_row[j+1]);
+
+            //now to do the math, need to make them all uint16 to deal with overflow 
+            //this will use up the full 128 bit vector register
+            //uint16x8_t vmovl_u8(uint8x8_t a);
+            uint16x8_t top_left_16 = vmovl_u8(top_left_8);
+            uint16x8_t top_16 = vmovl_u8(top_8);
+            uint16x8_t top_right_16 = vmovl_u8(top_right_8);
+
+            uint16x8_t mid_left_16 = vmovl_u8(mid_left_8);
+            uint16x8_t mid_16 = vmovl_u8(mid_8);
+            uint16x8_t mid_right_16 = vmovl_u8(mid_right_8);
+
+            uint16x8_t bot_left_16 = vmovl_u8(bot_left_8);
+            uint16x8_t bot_16 = vmovl_u8(bot_8);
+            uint16x8_t bot_right_16 = vmovl_u8(bot_right_8);
+
+            //now that its all been 16 bitted,make it signed
+            int16x8_t top_left_16_S = vreinterpretq_s16_u16(top_left_16);
+            int16x8_t top_16_S = vreinterpretq_s16_u16(top_16);
+            int16x8_t top_right_16_S = vreinterpretq_s16_u16(top_right_16);
+
+            int16x8_t mid_left_16_S = vreinterpretq_s16_u16(mid_left_16);
+            int16x8_t mid_16_S = vreinterpretq_s16_u16(mid_16);
+            int16x8_t mid_right_16_S = vreinterpretq_s16_u16(mid_right_16);
+
+            int16x8_t bot_left_16_S = vreinterpretq_s16_u16(bot_left_16);
+            int16x8_t bot_16_S = vreinterpretq_s16_u16(bot_16);
+            int16x8_t bot_right_16_S = vreinterpretq_s16_u16(bot_right_16);
+
+            //scalar multiply all the vectors by each value
+            //int16x8_t vmulq_n_s16(int16x8_t a, int16_t b);
+            //int16x8_t vaddq_s16(int16x8_t a, int16x8_t b);
+            // {-1, 0, 1, 
+            //  -2, 0, 2, 
+            //  -1, 0, 1 };
+            int16x8_t gx = vmulq_n_s16(top_left_16_S, -1);
+            //gx = vaddq_s16(gx,vmulq_n_s16(top_16_S, 0));
+            gx = vaddq_s16(gx,vmulq_n_s16(top_right_16_S, 1));
+
+            gx = vaddq_s16(gx,vmulq_n_s16(mid_left_16_S, -2));
+            //gx = vaddq_s16(gx,vmulq_n_s16(mid_16_S, 0));
+            gx = vaddq_s16(gx,vmulq_n_s16(mid_right_16_S, 2));
+
+            gx = vaddq_s16(gx,vmulq_n_s16(bot_left_16_S, -1));
+            //gx = vaddq_s16(gx,vmulq_n_s16(bot_16_S, 0));
+            gx = vaddq_s16(gx,vmulq_n_s16(bot_right_16_S, 1));
+
+            //now the same for gy
+            // {1, 2, 1, 
+            //  0, 0, 0, 
+            // -1, -2, -1};
+            int16x8_t gy = vmulq_n_s16(top_left_16_S, 1);
+            gy = vaddq_s16(gy,vmulq_n_s16(top_16_S, 2));
+            gy = vaddq_s16(gy,vmulq_n_s16(top_right_16_S, 1));
+
+            //!is this necessary if i multiply it by zero? summing would just give me zero right
+            //gy = vaddq_s16(gy,vmulq_n_s16(mid_left_16_S, 0));
+            //gy = vaddq_s16(gy,vmulq_n_s16(mid_16_S, 0));
+            //gy = vaddq_s16(gy,vmulq_n_s16(mid_right_16_S, 0));
+
+            gy = vaddq_s16(gy,vmulq_n_s16(bot_left_16_S, -1));
+            gy = vaddq_s16(gy,vmulq_n_s16(bot_16_S, -2));
+            gy = vaddq_s16(gy,vmulq_n_s16(bot_right_16_S, -1));
+
+            //clamp and sum it all
+            //first i want to absolute value everything, then sum it all, then clamp it
+            int16x8_t gx_abs = vabsq_s16(gx);
+            int16x8_t gy_abs = vabsq_s16(gy);
+            //sum those two vectors together
+            //int16x8_t vaddq_s16(int16x8_t a, int16x8_t b);
+            int16x8_t sum = vaddq_s16(gx_abs, gy_abs);
+            //clamp it and make it back into uint8
+            //uint8x8_t vqmovn_u16(uint16x8_t a);
+            //this intrinsic automatically makes it into the max 8-bit value if it goes over
+            uint16x8_t sum_unsigned = vreinterpretq_u16_s16(sum);
+            uint8x8_t result = vqmovn_u16(sum_unsigned);
+            //write it to the output
+            //void vst1_u8(__transfersize(8) uint8_t * ptr, uint8x8_t val);
+            vst1_u8(&sobeled_matrix.ptr<uchar>(i)[j], result);
         }
     }
     return sobeled_matrix;
