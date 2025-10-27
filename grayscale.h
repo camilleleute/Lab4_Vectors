@@ -13,13 +13,15 @@
 
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <arm_neon.h>
 
 using namespace cv;
 using namespace std;
 
-#define RED_SCALER 0.2126
-#define BLUE_SCALER 0.0722 
-#define GREEN_SCALER 0.7152
+// Scale coefficients (BT.709), scaled by 256 for integer math
+#define R_COEFF 54    // 0.2126 * 256 ≈ 54
+#define G_COEFF 183   // 0.7152 * 256 ≈ 183
+#define B_COEFF 18    // 0.0722 * 256 ≈ 18
 
 Mat to442_grayscale(const Mat& input);
 
