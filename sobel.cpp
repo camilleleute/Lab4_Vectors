@@ -19,16 +19,11 @@ using namespace std;
 
 //takes in the greyscale matrix and then does this for every pixel in it
 Mat to442_sobel(Mat& matrix) {
-    int total_rows = matrix.rows;
 
     //make sure the input matrix is a multiple of 8 before beginning
-    int cropped_width = (total_rows / 8) * 8;
-    Mat cropped_matrix = matrix(Rect(0, 0, cropped_width, total_rows));
-
-    Mat sobeled_matrix(cropped_matrix.rows, cropped_matrix.cols, CV_8UC1);
+    Mat sobeled_matrix(matrix.rows, matrix.cols, CV_8UC1, Scalar(0));
     //dont include the first or the last row since we are skipping borders here
     for (int i = 1; i < matrix.rows-1; i++){
-
         //mat.ptr returns a pointer to the whole row of the matrix 
         //?do i need to check if its continuous before doing that??
         //get all the row neighbors (the top row, middle row, bottom row)
@@ -39,6 +34,7 @@ Mat to442_sobel(Mat& matrix) {
         //now that we have a pointer to each of the rows, iterate through those via column
         //need to grab in chunks of 8 so have it move forward 8 every time
         //skip first and last col as well since we dont want border
+        //! something here is funky
         for (int j = 1; j < matrix.cols-8; j+=8){
             //vld1_u8(const uint8_t* ptr) -> uint8x8_t top_left;
             //make the vectors for all the neighbors by passing in the row pointer and which column to go to
@@ -47,7 +43,7 @@ Mat to442_sobel(Mat& matrix) {
             uint8x8_t top_right_8 = vld1_u8(&top_row[j+1]);
 
             uint8x8_t mid_left_8 = vld1_u8(&mid_row[j-1]);
-            uint8x8_t mid_8 = vld1_u8(&mid_row[j]);
+            //uint8x8_t mid_8 = vld1_u8(&mid_row[j]);
             uint8x8_t mid_right_8 = vld1_u8(&mid_row[j+1]);
 
             uint8x8_t bot_left_8 = vld1_u8(&bot_row[j-1]);
@@ -62,7 +58,7 @@ Mat to442_sobel(Mat& matrix) {
             uint16x8_t top_right_16 = vmovl_u8(top_right_8);
 
             uint16x8_t mid_left_16 = vmovl_u8(mid_left_8);
-            uint16x8_t mid_16 = vmovl_u8(mid_8);
+            //uint16x8_t mid_16 = vmovl_u8(mid_8);
             uint16x8_t mid_right_16 = vmovl_u8(mid_right_8);
 
             uint16x8_t bot_left_16 = vmovl_u8(bot_left_8);
@@ -75,7 +71,7 @@ Mat to442_sobel(Mat& matrix) {
             int16x8_t top_right_16_S = vreinterpretq_s16_u16(top_right_16);
 
             int16x8_t mid_left_16_S = vreinterpretq_s16_u16(mid_left_16);
-            int16x8_t mid_16_S = vreinterpretq_s16_u16(mid_16);
+            //int16x8_t mid_16_S = vreinterpretq_s16_u16(mid_16);
             int16x8_t mid_right_16_S = vreinterpretq_s16_u16(mid_right_16);
 
             int16x8_t bot_left_16_S = vreinterpretq_s16_u16(bot_left_16);
@@ -131,6 +127,7 @@ Mat to442_sobel(Mat& matrix) {
             uint8x8_t result = vqmovn_u16(sum_unsigned);
             //write it to the output
             //void vst1_u8(__transfersize(8) uint8_t * ptr, uint8x8_t val);
+            //printf("writing pixels to output matrix\n");
             vst1_u8(&sobeled_matrix.ptr<uchar>(i)[j], result);
         }
     }

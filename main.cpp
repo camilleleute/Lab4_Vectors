@@ -5,6 +5,7 @@
 
 //! main for image to greyscale
 int main(int argc, char* argv[]){
+
     // make sure that there are enough arguments provided
     if (argc != 2) {
         std::cerr << "Error: not enough arguments" << std::endl;
@@ -27,10 +28,14 @@ int main(int argc, char* argv[]){
     while(frame.read(src_frame) == true){
         //greyscale that hoe
         Mat gray_img = to442_grayscale(src_frame);
+        //crop it before making threads
+        int cropped_width = (gray_img.cols / 8) * 8;
+        Mat cropped_frame = gray_img(Rect(0, 0, cropped_width, gray_img.rows));
+    
         //make the frame that the children threads are going to write to.
-        output_frame.create(gray_img.rows, gray_img.cols, CV_8UC1);
+        output_frame.create(cropped_frame.rows, cropped_frame.cols, CV_8UC1);
         //calculate the threadbounds
-        array<ThreadBounds, 4> bounds = find_chunk(gray_img.rows);
+        array<ThreadBounds, 4> bounds = find_chunk(cropped_frame.rows);
         //print_thread_bounds(bounds, gray_img.rows);
 
         //now make the children and assign them the task
@@ -47,6 +52,11 @@ int main(int argc, char* argv[]){
         //cout << "threads joined" << endl;
 
         //stop it if u press the escape key
+        //black out the borders
+        output_frame.row(0).setTo(0);                  
+        output_frame.row(output_frame.rows - 1).setTo(0);    
+        output_frame.col(0).setTo(0);                   
+        output_frame.col(output_frame.cols - 1).setTo(0);      
         imshow("sobby filty", output_frame);
         if(waitKey(1) == 27) {
             cout << "stopped the video" << endl;
