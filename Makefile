@@ -19,7 +19,7 @@ CXX= g++
 # need to include the shell package config command because that tells the C++ compiler where to find the opencv library
 # we are writing our own makefile and not using Cmake which is why we need to tell it where the library path is
 # need to know where the library of files is during compiling to create the object file
-CXXFLAGS= -g -Wall -std=c++17 $(shell pkg-config --cflags opencv4) -pthread
+CXXFLAGS= -g -Wall -std=c++17 -mfpu=neon $(shell pkg-config --cflags opencv4) -pthread
 
 # libraries I want to link with this project
 # need to include the library path while linking to create the executable

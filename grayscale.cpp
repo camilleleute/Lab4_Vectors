@@ -28,15 +28,45 @@ Mat to442_grayscale(const Mat& input) {
     Mat gray(input.rows, input.cols, CV_8UC1);
 
     for (int y = 0; y < input.rows; y++) {
-        for (int x = 0; x < input.cols; x++) {
-            Vec3b pixel = input.at<Vec3b>(y,x);
-            uchar blue = pixel[0];
-            uchar green = pixel[1];
-            uchar red = pixel[2];
+        const uchar* src = input.ptr<uchar>(y);
+        uchar* dst = gray.ptr<uchar>(y);
+
+        int x = 0;
+        for (; x <= input.cols - 16; x += 16){
+             // Load 16 pixels of each channel
+            uint8x16x3_t rgb = vld3q_u8(src + x * 3);
             
-            // convert to grayscale using ITU_R BT.709
-            uchar grayColor = static_cast<uchar>(RED_SCALER * red + GREEN_SCALER * green + BLUE_SCALER * blue);
-            gray.at<uchar>(y, x) = grayColor;
+            // Widen to 16-bit for math
+            uint16x8_t r_low = vmovl_u8(vget_low_u8(rgb.val[2]));
+            uint16x8_t g_low = vmovl_u8(vget_low_u8(rgb.val[1]));
+            uint16x8_t b_low = vmovl_u8(vget_low_u8(rgb.val[0]));
+
+            uint16x8_t r_high = vmovl_u8(vget_high_u8(rgb.val[2]));
+            uint16x8_t g_high = vmovl_u8(vget_high_u8(rgb.val[1]));
+            uint16x8_t b_high = vmovl_u8(vget_high_u8(rgb.val[0]));
+
+            // Apply grayscale
+            uint16x8_t gray_low = vmlaq_n_u16(vmlaq_n_u16(vmulq_n_u16(r_low, R_COEFF),g_low, G_COEFF),b_low, B_COEFF);
+
+            uint16x8_t gray_high = vmlaq_n_u16(vmlaq_n_u16(vmulq_n_u16(r_high, R_COEFF),g_high, G_COEFF),b_high, B_COEFF);
+
+            // Normalize/divide by 256
+            gray_low = vshrq_n_u16(gray_low, 8);
+            gray_high = vshrq_n_u16(gray_high, 8);
+
+            // Narrow back to 8-bit and combine
+            uint8x16_t gray_vec = vcombine_u8(vqmovn_u16(gray_low), vqmovn_u16(gray_high));
+
+            // Store result
+            vst1q_u8(dst + x, gray_vec);
+            
+        }
+        // Handle leftover pixels
+        for (; x < input.cols; x++) {
+            uchar b = src[x * 3 + 0];
+            uchar g = src[x * 3 + 1];
+            uchar r = src[x * 3 + 2];
+            dst[x] = static_cast<uchar>((r * R_COEFF + g * G_COEFF + b * B_COEFF) >> 8);
         }
     }
 
