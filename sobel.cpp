@@ -34,7 +34,6 @@ Mat to442_sobel(Mat& matrix) {
         //now that we have a pointer to each of the rows, iterate through those via column
         //need to grab in chunks of 8 so have it move forward 8 every time
         //skip first and last col as well since we dont want border
-        //! something here is funky
         for (int j = 1; j < matrix.cols-8; j+=8){
             //vld1_u8(const uint8_t* ptr) -> uint8x8_t top_left;
             //make the vectors for all the neighbors by passing in the row pointer and which column to go to
